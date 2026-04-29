@@ -14,17 +14,14 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
-    ENV = 'development'
 
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
-    ENV = 'production'
 
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    ENV = 'testing'
 
 # Configuration dictionary
 config = {

@@ -51,9 +51,16 @@ export default function Index() {
               <Zap className="w-5 h-5" />
               Start Free Analysis
             </Link>
-            <button className="inline-flex items-center justify-center rounded-lg border-2 border-primary text-primary font-medium px-8 py-3 transition-all hover:bg-primary/20 active:scale-95">
+            <a
+              href="#features"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex items-center justify-center rounded-lg border-2 border-primary text-primary font-medium px-8 py-3 transition-all hover:bg-primary/20 active:scale-95"
+            >
               Learn More
-            </button>
+            </a>
           </div>
         </div>
 
@@ -220,9 +227,9 @@ export default function Index() {
             { name: "Random Forest", desc: "Ensemble Learning" },
             { name: "Support Vector Machine", desc: "Powerful Classifier" },
             { name: "K-Nearest Neighbors", desc: "Instance-Based" },
-          ].map((algo, idx) => (
+          ].map((algo) => (
             <div
-              key={idx}
+              key={algo.name}
               className="p-6 rounded-lg bg-gradient-to-br from-primary/5 to-secondary/5 border border-primary/20 text-center hover:border-primary/50 transition-all"
             >
               <div className="font-semibold text-foreground text-sm mb-1">{algo.name}</div>

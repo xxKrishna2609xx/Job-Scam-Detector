@@ -1,7 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Shield, ArrowLeft, Send, AlertCircle, CheckCircle, BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  Shield,
+  ArrowLeft,
+  Send,
+  AlertCircle,
+  CheckCircle,
+  BarChart3,
+  AlertTriangle,
+  Download,
+  Loader2,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface PredictionResult {
   algorithm: string;
@@ -14,6 +32,7 @@ interface AnalysisResults {
   predictions: PredictionResult[];
   overallRisk: "genuine" | "suspicious" | "scam";
   riskScore: number;
+  mock?: boolean;
 }
 
 export default function Detect() {
@@ -29,6 +48,7 @@ export default function Detect() {
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("all");
+  const [isMockData, setIsMockData] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -43,6 +63,7 @@ export default function Detect() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setIsMockData(false);
 
     try {
       const response = await fetch("/api/analyze-job", {
@@ -59,9 +80,11 @@ export default function Detect() {
 
       const data = await response.json();
       setResults(data);
+      setIsMockData(data.mock === true);
     } catch (error) {
       console.error("Error analyzing job:", error);
-      // Mock data for demonstration
+      // Fallback mock data — clearly flagged
+      setIsMockData(true);
       setResults({
         predictions: [
           { algorithm: "Logistic Regression", prediction: "genuine", confidence: 92, color: "#10B981" },
@@ -72,16 +95,47 @@ export default function Detect() {
         ],
         overallRisk: "genuine",
         riskScore: 88,
+        mock: true,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const chartData = results?.predictions.map((p) => ({
+  const filteredPredictions = results?.predictions.filter(
+    (p) => selectedAlgorithm === "all" || p.prediction === selectedAlgorithm
+  ) || [];
+
+  const chartData = filteredPredictions.map((p) => ({
     name: p.algorithm.split(" ")[0],
     confidence: p.confidence,
-  })) || [];
+    fill: p.prediction === "genuine" ? "#10B981" : "#EF4444",
+  }));
+
+  const handleExportReport = () => {
+    if (!results) return;
+
+    const report = {
+      generatedAt: new Date().toISOString(),
+      jobDetails: formData,
+      analysis: {
+        overallRisk: results.overallRisk,
+        riskScore: results.riskScore,
+        isMockData: isMockData,
+        predictions: results.predictions,
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jobguard-report-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-background">
@@ -207,8 +261,17 @@ export default function Detect() {
                   disabled={loading}
                   className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                 >
-                  <Send className="w-4 h-4" />
-                  {loading ? "Analyzing..." : "Analyze Job"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Analyze Job
+                    </>
+                  )}
                 </button>
               </form>
             </div>
@@ -216,7 +279,18 @@ export default function Detect() {
 
           {/* Results Section */}
           <div className="lg:col-span-2">
-            {!results ? (
+            {loading ? (
+              /* Loading Skeleton */
+              <div className="p-12 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center min-h-[600px] text-center">
+                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  Analyzing Job Posting...
+                </h3>
+                <p className="text-foreground/60 max-w-sm">
+                  Running analysis through all 5 machine learning models. This won't take long.
+                </p>
+              </div>
+            ) : !results ? (
               <div className="p-12 rounded-2xl bg-card border border-border/50 flex flex-col items-center justify-center min-h-[600px] text-center">
                 <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                   <BarChart3 className="w-8 h-8 text-primary" />
@@ -231,6 +305,21 @@ export default function Detect() {
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Demo Mode Banner */}
+                {isMockData && (
+                  <div className="p-4 rounded-xl bg-amber-900/30 border border-amber-600/50 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-amber-300 text-sm">Demo Mode</h4>
+                      <p className="text-amber-200/70 text-sm mt-1">
+                        The backend server is not connected or models are not loaded. Showing
+                        simulated results. Start the Flask server with trained models for real
+                        predictions.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Overall Risk Card */}
                 <div
                   className={`p-8 rounded-2xl border-2 ${
@@ -249,10 +338,10 @@ export default function Detect() {
                       <p
                         className={`text-sm font-medium ${
                           results.overallRisk === "genuine"
-                            ? "text-green-700"
+                            ? "text-green-400"
                             : results.overallRisk === "suspicious"
-                              ? "text-yellow-700"
-                              : "text-red-700"
+                              ? "text-yellow-400"
+                              : "text-red-400"
                         }`}
                       >
                         {results.overallRisk === "genuine"
@@ -266,10 +355,10 @@ export default function Detect() {
                       <div
                         className={`text-4xl font-bold mb-1 ${
                           results.overallRisk === "genuine"
-                            ? "text-green-600"
+                            ? "text-green-400"
                             : results.overallRisk === "suspicious"
-                              ? "text-yellow-600"
-                              : "text-red-600"
+                              ? "text-yellow-400"
+                              : "text-red-400"
                         }`}
                       >
                         {results.riskScore}%
@@ -318,40 +407,47 @@ export default function Detect() {
                   </div>
                 </div>
 
-                {/* Chart */}
+                {/* Chart — now respects the filter */}
                 <div className="p-6 rounded-2xl bg-card border border-border/50">
                   <h3 className="text-lg font-semibold text-foreground mb-6">
                     Model Confidence Comparison
                   </h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis dataKey="name" stroke="#9ca3af" />
-                      <YAxis stroke="#9ca3af" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1f2937",
-                          border: "1px solid #374151",
-                          borderRadius: "8px",
-                          color: "#f3f4f6",
-                        }}
-                      />
-                      <Bar dataKey="confidence" fill="#6f46f1" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis dataKey="name" stroke="#9ca3af" />
+                        <YAxis stroke="#9ca3af" domain={[0, 100]} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#1f2937",
+                            border: "1px solid #374151",
+                            borderRadius: "8px",
+                            color: "#f3f4f6",
+                          }}
+                          formatter={(value: number) => [`${value}%`, "Confidence"]}
+                        />
+                        <Bar dataKey="confidence" radius={[8, 8, 0, 0]}>
+                          {chartData.map((entry, index) => (
+                            <rect key={index} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-center text-foreground/60 py-12">
+                      No models match the selected filter.
+                    </p>
+                  )}
                 </div>
 
                 {/* Detailed Predictions */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-foreground">Algorithm Predictions</h3>
-                  {results.predictions
-                    .filter(
-                      (p) =>
-                        selectedAlgorithm === "all" || p.prediction === selectedAlgorithm
-                    )
-                    .map((result, idx) => (
+                  {filteredPredictions.length > 0 ? (
+                    filteredPredictions.map((result, idx) => (
                       <div
-                        key={idx}
+                        key={result.algorithm}
                         className="p-6 rounded-xl border border-border/50 bg-card hover:shadow-md transition-all"
                       >
                         <div className="flex items-start justify-between">
@@ -361,12 +457,12 @@ export default function Detect() {
                             </h4>
                             <div className="flex items-center gap-2">
                               {result.prediction === "genuine" ? (
-                                <div className="flex items-center gap-2 text-green-600 font-medium">
+                                <div className="flex items-center gap-2 text-green-400 font-medium">
                                   <CheckCircle className="w-4 h-4" />
                                   Predicted: GENUINE
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 text-red-600 font-medium">
+                                <div className="flex items-center gap-2 text-red-400 font-medium">
                                   <AlertCircle className="w-4 h-4" />
                                   Predicted: SCAM
                                 </div>
@@ -393,7 +489,12 @@ export default function Detect() {
                           />
                         </div>
                       </div>
-                    ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-foreground/60 py-8">
+                      No models match the selected filter.
+                    </p>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -401,6 +502,8 @@ export default function Detect() {
                   <button
                     onClick={() => {
                       setResults(null);
+                      setIsMockData(false);
+                      setSelectedAlgorithm("all");
                       setFormData({
                         jobTitle: "",
                         companyName: "",
@@ -414,7 +517,11 @@ export default function Detect() {
                   >
                     Analyze Another Job
                   </button>
-                  <button className="flex-1 px-6 py-3 rounded-lg btn-primary">
+                  <button
+                    onClick={handleExportReport}
+                    className="flex-1 px-6 py-3 rounded-lg btn-primary flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
                     Export Report
                   </button>
                 </div>

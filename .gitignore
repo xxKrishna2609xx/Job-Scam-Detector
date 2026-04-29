@@ -24,4 +24,13 @@ dist-ssr
 *.sw?
 
 .config/
-!.env
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+
+# Trained ML models (regenerate with: cd backend && python train_models.py)
+backend/models/trained/
