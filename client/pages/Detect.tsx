@@ -154,6 +154,13 @@ export default function Detect() {
             Back Home
           </Link>
           <Link
+            to="/model-insights"
+            className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Model Insights
+          </Link>
+          <Link
             to="/about"
             className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
           >

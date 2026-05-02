@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, CheckCircle, AlertCircle, Zap, Info } from "lucide-react";
+import { Shield, CheckCircle, AlertCircle, Zap, Info, BarChart3 } from "lucide-react";
 
 export default function Index() {
   return (
@@ -26,6 +26,13 @@ export default function Index() {
             >
               How It Works
             </a>
+            <Link
+              to="/model-insights"
+              className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Model Insights
+            </Link>
             <Link
               to="/about"
               className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
@@ -58,16 +65,13 @@ export default function Index() {
               <Zap className="w-5 h-5" />
               Start Free Analysis
             </Link>
-            <a
-              href="#features"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="inline-flex items-center justify-center rounded-lg border-2 border-primary text-primary font-medium px-8 py-3 transition-all hover:bg-primary/20 active:scale-95"
+            <Link
+              to="/model-insights"
+              className="inline-flex items-center justify-center rounded-lg border-2 border-primary text-primary font-medium px-8 py-3 transition-all hover:bg-primary/20 active:scale-95 gap-2"
             >
-              Learn More
-            </a>
+              <BarChart3 className="w-5 h-5" />
+              Model Insights
+            </Link>
           </div>
         </div>
 
