@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Download,
   Loader2,
+  Info,
 } from "lucide-react";
 import {
   BarChart,
@@ -151,6 +152,13 @@ export default function Detect() {
           <Link to="/" className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back Home
+          </Link>
+          <Link
+            to="/about"
+            className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
+          >
+            <Info className="w-4 h-4" />
+            About
           </Link>
         </div>
       </nav>

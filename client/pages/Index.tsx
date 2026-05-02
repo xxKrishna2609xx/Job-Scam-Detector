@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Shield, CheckCircle, AlertCircle, Zap } from "lucide-react";
+import { Shield, CheckCircle, AlertCircle, Zap, Info } from "lucide-react";
 
 export default function Index() {
   return (
@@ -26,6 +26,13 @@ export default function Index() {
             >
               How It Works
             </a>
+            <Link
+              to="/about"
+              className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
+            >
+              <Info className="w-4 h-4" />
+              About
+            </Link>
             <Link to="/detect" className="btn-primary">
               Start Detection
             </Link>
