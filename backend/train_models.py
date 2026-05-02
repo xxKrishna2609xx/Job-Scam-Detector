@@ -24,7 +24,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -86,10 +86,12 @@ def train_models(X_train, X_test, y_train, y_test):
         y_pred = model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
         report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
+        cm = confusion_matrix(y_test, y_pred).tolist()
         results[name] = {
             "model": model,
             "accuracy": accuracy,
             "report": report,
+            "cm": cm,
         }
         print(f"    Accuracy: {accuracy:.4f}")
 
@@ -112,8 +114,24 @@ def save_models(results, vectorizer):
         pickle.dump(vectorizer, f)
     print(f"  Saved {vectorizer_path}")
 
-    # Save accuracy metadata
-    metadata = {name: data["accuracy"] for name, data in results.items()}
+    # Save full metrics metadata
+    metadata = {}
+    for name, data in results.items():
+        # Scikit-learn classification_report uses '1' or '1.0' for the scam class, '0' or '0.0' for genuine
+        # or 'macro avg', 'weighted avg'. We want the '1' class metrics if present, or weighted average.
+        scam_metrics = data['report'].get('1', data['report'].get('1.0', data['report']['weighted avg']))
+        
+        metadata[name] = {
+            "accuracy": data["accuracy"],
+            "precision": scam_metrics["precision"],
+            "recall": scam_metrics["recall"],
+            "f1": scam_metrics["f1-score"],
+            "tp": data["cm"][1][1],
+            "tn": data["cm"][0][0],
+            "fp": data["cm"][0][1],
+            "fn": data["cm"][1][0],
+        }
+        
     metadata_path = os.path.join(MODEL_DIR, "metadata.pkl")
     with open(metadata_path, "wb") as f:
         pickle.dump(metadata, f)

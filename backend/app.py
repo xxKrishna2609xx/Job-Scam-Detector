@@ -68,6 +68,13 @@ def models_info():
     }), 200
 
 
+@app.route('/api/models/metrics', methods=['GET'])
+def models_metrics():
+    """Get full metrics (accuracy, precision, recall, f1, cm) for all models."""
+    from models.ml_models import ml_models
+    return jsonify(ml_models.metadata), 200
+
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Endpoint not found'}), 404

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Shield,
@@ -28,7 +28,7 @@ import {
 } from "recharts";
 
 /* ─── Static model data (matches Streamlit academic demo) ─── */
-const MODEL_DATA: Record<
+const DEFAULT_MODEL_DATA: Record<
   string,
   {
     accuracy: number;
@@ -110,35 +110,7 @@ const MODEL_DATA: Record<
   },
 };
 
-const MODELS = Object.keys(MODEL_DATA);
-
-const accuracyBarData = MODELS.map((name) => ({
-  name: name.replace("Logistic Regression", "Log. Reg.").replace("Random Forest", "Rand. Forest"),
-  fullName: name,
-  accuracy: MODEL_DATA[name].accuracy,
-  color: MODEL_DATA[name].color,
-}));
-
-const radarData = [
-  {
-    metric: "Precision",
-    "Random Forest": MODEL_DATA["Random Forest"].precision,
-    "Logistic Regression": MODEL_DATA["Logistic Regression"].precision,
-    "Naive Bayes": MODEL_DATA["Naive Bayes"].precision,
-  },
-  {
-    metric: "Recall",
-    "Random Forest": MODEL_DATA["Random Forest"].recall,
-    "Logistic Regression": MODEL_DATA["Logistic Regression"].recall,
-    "Naive Bayes": MODEL_DATA["Naive Bayes"].recall,
-  },
-  {
-    metric: "F1 Score",
-    "Random Forest": MODEL_DATA["Random Forest"].f1,
-    "Logistic Regression": MODEL_DATA["Logistic Regression"].f1,
-    "Naive Bayes": MODEL_DATA["Naive Bayes"].f1,
-  },
-];
+const MODELS = Object.keys(DEFAULT_MODEL_DATA);
 
 const METRIC_TOOLTIPS: Record<string, string> = {
   Accuracy: "% of all predictions that were correct",
@@ -263,7 +235,82 @@ function ConfusionMatrix({
 
 export default function ModelInsights() {
   const [selectedModel, setSelectedModel] = useState("Random Forest");
-  const m = MODEL_DATA[selectedModel];
+  const [modelData, setModelData] = useState(DEFAULT_MODEL_DATA);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMetrics() {
+      try {
+        const response = await fetch("/api/models/metrics");
+        if (!response.ok) throw new Error("Failed to fetch metrics");
+        const data = await response.json();
+        
+        // Map backend keys to frontend model names
+        const keyMap: Record<string, string> = {
+          logistic_regression: "Logistic Regression",
+          naive_bayes: "Naive Bayes",
+          random_forest: "Random Forest",
+          svm: "SVM",
+          knn: "KNN",
+        };
+
+        const updatedData = { ...DEFAULT_MODEL_DATA };
+        for (const [backendKey, metrics] of Object.entries(data)) {
+          const frontendKey = keyMap[backendKey];
+          if (frontendKey && updatedData[frontendKey]) {
+            // @ts-ignore
+            updatedData[frontendKey] = {
+              ...updatedData[frontendKey],
+              accuracy: metrics.accuracy * 100,
+              precision: metrics.precision * 100,
+              recall: metrics.recall * 100,
+              f1: metrics.f1 * 100,
+              tp: metrics.tp,
+              tn: metrics.tn,
+              fp: metrics.fp,
+              fn: metrics.fn,
+            };
+          }
+        }
+        setModelData(updatedData);
+      } catch (err) {
+        console.error("Error fetching model metrics, falling back to static data", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMetrics();
+  }, []);
+
+  const m = modelData[selectedModel];
+
+  const accuracyBarData = MODELS.map((name) => ({
+    name: name.replace("Logistic Regression", "Log. Reg.").replace("Random Forest", "Rand. Forest"),
+    fullName: name,
+    accuracy: modelData[name].accuracy,
+    color: modelData[name].color,
+  }));
+
+  const radarData = [
+    {
+      metric: "Precision",
+      "Random Forest": modelData["Random Forest"].precision,
+      "Logistic Regression": modelData["Logistic Regression"].precision,
+      "Naive Bayes": modelData["Naive Bayes"].precision,
+    },
+    {
+      metric: "Recall",
+      "Random Forest": modelData["Random Forest"].recall,
+      "Logistic Regression": modelData["Logistic Regression"].recall,
+      "Naive Bayes": modelData["Naive Bayes"].recall,
+    },
+    {
+      metric: "F1 Score",
+      "Random Forest": modelData["Random Forest"].f1,
+      "Logistic Regression": modelData["Logistic Regression"].f1,
+      "Naive Bayes": modelData["Naive Bayes"].f1,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-background">
@@ -368,7 +415,7 @@ export default function ModelInsights() {
                 }`}
                 style={
                   selectedModel === name
-                    ? { backgroundColor: MODEL_DATA[name].color }
+                    ? { backgroundColor: modelData[name].color }
                     : {}
                 }
               >
