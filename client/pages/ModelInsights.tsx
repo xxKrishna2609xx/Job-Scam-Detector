@@ -26,6 +26,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
+import { getApiUrl } from "@/lib/utils";
 
 /* ─── Static model data (matches Streamlit academic demo) ─── */
 const DEFAULT_MODEL_DATA: Record<
@@ -241,7 +242,7 @@ export default function ModelInsights() {
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const response = await fetch("/api/models/metrics");
+        const response = await fetch(getApiUrl("/api/models/metrics"));
         if (!response.ok) throw new Error("Failed to fetch metrics");
         const data = await response.json();
         

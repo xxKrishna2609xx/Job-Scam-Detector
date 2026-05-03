@@ -10,29 +10,6 @@ analysis_bp = Blueprint('analysis', __name__, url_prefix='/api')
 def analyze_job():
     """
     Main endpoint for analyzing job postings
-    
-    Request body:
-    {
-        "jobTitle": str,
-        "companyName": str,
-        "jobDescription": str,
-        "requirements": str (optional),
-        "salary": str (optional),
-        "location": str (optional)
-    }
-    
-    Response:
-    {
-        "predictions": [
-            {
-                "algorithm": str,
-                "prediction": "genuine" | "scam",
-                "confidence": float (0-100)
-            }
-        ],
-        "overallRisk": "genuine" | "suspicious" | "scam",
-        "riskScore": float (0-100)
-    }
     """
     try:
         data = request.get_json()
@@ -55,12 +32,21 @@ def analyze_job():
 @analysis_bp.route('/models', methods=['GET'])
 def get_models():
     """Get list of available ML models"""
+    models_list = []
+    types_map = {
+        'Logistic Regression': 'Baseline Model',
+        'Naive Bayes': 'Text Analysis',
+        'Random Forest': 'Ensemble Learning',
+        'SVM': 'Powerful Classifier',
+        'KNN': 'Instance-Based'
+    }
+    
+    for name in ml_models.metadata.keys():
+        models_list.append({
+            'name': name,
+            'type': types_map.get(name, 'Machine Learning Model')
+        })
+
     return jsonify({
-        'models': [
-            {'name': 'Logistic Regression', 'type': 'Baseline'},
-            {'name': 'Naive Bayes', 'type': 'Text Analysis'},
-            {'name': 'Random Forest', 'type': 'Ensemble'},
-            {'name': 'Support Vector Machine', 'type': 'Powerful Classifier'},
-            {'name': 'K-Nearest Neighbors', 'type': 'Instance-Based'}
-        ]
+        'models': models_list
     }), 200

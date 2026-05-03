@@ -21,6 +21,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { getApiUrl } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface PredictionResult {
   algorithm: string;
@@ -67,7 +71,7 @@ export default function Detect() {
     setIsMockData(false);
 
     try {
-      const response = await fetch("/api/analyze-job", {
+      const response = await fetch(getApiUrl("/api/analyze-job"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,26 +120,94 @@ export default function Detect() {
   const handleExportReport = () => {
     if (!results) return;
 
-    const report = {
-      generatedAt: new Date().toISOString(),
-      jobDetails: formData,
-      analysis: {
-        overallRisk: results.overallRisk,
-        riskScore: results.riskScore,
-        isMockData: isMockData,
-        predictions: results.predictions,
-      },
-    };
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text("JobGuard Analysis Report", 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    
+    // Overall Assessment
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Overall Assessment", 14, 45);
+    
+    doc.setFontSize(12);
+    let riskColor: [number, number, number] = [0, 0, 0];
+    let riskText = "";
+    if (results.overallRisk === "genuine") {
+        riskColor = [16, 185, 129]; // green
+        riskText = "GENUINE";
+    } else if (results.overallRisk === "suspicious") {
+        riskColor = [234, 179, 8]; // yellow
+        riskText = "SUSPICIOUS";
+    } else {
+        riskColor = [239, 68, 68]; // red
+        riskText = "SCAM";
+    }
+    
+    doc.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
+    doc.text(`Risk Level: ${riskText} (Score: ${results.riskScore}%)`, 14, 55);
 
-    const blob = new Blob([JSON.stringify(report, null, 2)], {
-      type: "application/json",
+    if (isMockData) {
+        doc.setTextColor(234, 179, 8);
+        doc.text("Note: This report was generated using DEMO mode data.", 14, 63);
+    }
+    
+    // Job Details Table
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Job Details", 14, isMockData ? 78 : 70);
+    
+    autoTable(doc, {
+        startY: isMockData ? 82 : 74,
+        head: [['Field', 'Value']],
+        body: [
+            ['Job Title', formData.jobTitle || 'N/A'],
+            ['Company', formData.companyName || 'N/A'],
+            ['Location', formData.location || 'N/A'],
+            ['Salary', formData.salary || 'N/A'],
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: [63, 63, 70] }
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `jobguard-report-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+
+    // Model Predictions Table
+    const lastAutoTableY = (doc as any).lastAutoTable?.finalY || 120;
+    
+    doc.text("Model Predictions", 14, lastAutoTableY + 15);
+    
+    const predictionBody = results.predictions.map(p => [
+        p.algorithm,
+        p.prediction.toUpperCase(),
+        `${p.confidence}%`
+    ]);
+
+    autoTable(doc, {
+        startY: lastAutoTableY + 20,
+        head: [['Algorithm', 'Prediction', 'Confidence']],
+        body: predictionBody,
+        theme: 'striped',
+        headStyles: { fillColor: [63, 63, 70] },
+        didParseCell: function(data) {
+            if (data.section === 'body' && data.column.index === 1) {
+                if (data.cell.raw === 'GENUINE') {
+                    data.cell.styles.textColor = [16, 185, 129];
+                    data.cell.styles.fontStyle = 'bold';
+                } else if (data.cell.raw === 'SCAM') {
+                    data.cell.styles.textColor = [239, 68, 68];
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            }
+        }
+    });
+
+    // Save PDF
+    doc.save(`jobguard-report-${Date.now()}.pdf`);
   };
 
   return (
@@ -160,6 +232,24 @@ export default function Detect() {
             <BarChart3 className="w-4 h-4" />
             Model Insights
           </Link>
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(getApiUrl('/api/health'));
+                if (res.ok) {
+                  toast.success("Backend Connected Successfully!");
+                } else {
+                  toast.error("Backend returned an error.");
+                }
+              } catch (err) {
+                toast.error("Could not connect to Backend.");
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            Check Connection
+          </button>
           <Link
             to="/about"
             className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"

@@ -10,11 +10,7 @@ load_dotenv()
 
 # Create Flask app
 app = Flask(__name__)
-CORS(app, origins=[
-    "http://localhost:8080",
-    "http://localhost:5173",
-    "http://localhost:3000",
-])
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Configuration
 app.config['DEBUG'] = os.getenv('DEBUG', 'False') == 'True'
@@ -23,6 +19,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max request size
 # Register blueprints
 from routes.analysis import analysis_bp
 app.register_blueprint(analysis_bp)
+
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({'status': 'online', 'service': 'Job Scam Detector API'}), 200
 
 
 # Basic health check endpoint
@@ -36,34 +36,24 @@ def models_info():
     """Get information about available ML models."""
     from models.ml_models import ml_models
 
+    models_list = []
+    types_map = {
+        'Logistic Regression': 'Baseline Model',
+        'Naive Bayes': 'Text Analysis',
+        'Random Forest': 'Ensemble Learning',
+        'SVM': 'Powerful Classifier',
+        'KNN': 'Instance-Based'
+    }
+    
+    for name, meta in ml_models.metadata.items():
+        models_list.append({
+            'name': name,
+            'type': types_map.get(name, 'Machine Learning Model'),
+            'accuracy': meta.get('accuracy', 'N/A')
+        })
+
     return jsonify({
-        'models': [
-            {
-                'name': 'Logistic Regression',
-                'type': 'Baseline Model',
-                'accuracy': ml_models.metadata.get('logistic_regression', 'N/A')
-            },
-            {
-                'name': 'Multinomial Naive Bayes',
-                'type': 'Text Analysis',
-                'accuracy': ml_models.metadata.get('naive_bayes', 'N/A')
-            },
-            {
-                'name': 'Random Forest',
-                'type': 'Ensemble Learning',
-                'accuracy': ml_models.metadata.get('random_forest', 'N/A')
-            },
-            {
-                'name': 'Support Vector Machine',
-                'type': 'Powerful Classifier',
-                'accuracy': ml_models.metadata.get('svm', 'N/A')
-            },
-            {
-                'name': 'K-Nearest Neighbors',
-                'type': 'Instance-Based',
-                'accuracy': ml_models.metadata.get('knn', 'N/A')
-            }
-        ],
+        'models': models_list,
         'loaded': ml_models.is_loaded()
     }), 200
 

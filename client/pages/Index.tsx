@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { Shield, CheckCircle, AlertCircle, Zap, Info, BarChart3 } from "lucide-react";
+import { getApiUrl } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Index() {
   return (
@@ -40,6 +42,24 @@ export default function Index() {
               <Info className="w-4 h-4" />
               About
             </Link>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(getApiUrl('/api/health'));
+                  if (res.ok) {
+                    toast.success("Backend Connected Successfully!");
+                  } else {
+                    toast.error("Backend returned an error.");
+                  }
+                } catch (err) {
+                  toast.error("Could not connect to Backend.");
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              Check Connection
+            </button>
             <Link to="/detect" className="btn-primary">
               Start Detection
             </Link>
