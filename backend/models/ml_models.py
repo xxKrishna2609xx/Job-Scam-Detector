@@ -95,6 +95,10 @@ class MLModels:
 
         Returns dict with predictions list, overallRisk, riskScore, and mock flag.
         """
+        # Try to load models if not already loaded (in case they were trained after startup)
+        if not self._loaded:
+            self.load_models()
+
         if not self._loaded:
             return self._mock_predictions()
 
