@@ -228,6 +228,65 @@ export default function Detect() {
               }
           }
       });
+
+      // Agentic AI Analysis Section
+      if (results.aiExplanation) {
+        let aiY = (doc as any).lastAutoTable?.finalY || 120;
+        
+        // Add new page if we're too far down
+        if (aiY > 240) {
+            doc.addPage();
+            aiY = 20;
+        } else {
+            aiY += 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setTextColor(79, 70, 229); // Indigo for AI
+        doc.text("Agentic AI Analysis", 14, aiY);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(60, 60, 60);
+        
+        // Wrap text for explanation
+        const splitExplanation = doc.splitTextToSize(results.aiExplanation, 180);
+        doc.text(splitExplanation, 14, aiY + 8);
+        
+        let flagsY = aiY + 8 + (splitExplanation.length * 6) + 5;
+        
+        if (results.redFlags && results.redFlags.length > 0) {
+            if (flagsY > 270) { doc.addPage(); flagsY = 20; }
+            doc.setFontSize(12);
+            doc.setTextColor(220, 38, 38); // Red
+            doc.text("Red Flags:", 14, flagsY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            results.redFlags.forEach((flag) => {
+                flagsY += 6;
+                const splitFlag = doc.splitTextToSize(`• ${flag}`, 175);
+                doc.text(splitFlag, 18, flagsY);
+                flagsY += (splitFlag.length - 1) * 5;
+            });
+            flagsY += 5;
+        }
+        
+        if (results.trustSignals && results.trustSignals.length > 0) {
+            if (flagsY > 270) { doc.addPage(); flagsY = 20; }
+            doc.setFontSize(12);
+            doc.setTextColor(22, 163, 74); // Green
+            doc.text("Trust Signals:", 14, flagsY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            results.trustSignals.forEach((signal) => {
+                flagsY += 6;
+                const splitSignal = doc.splitTextToSize(`• ${signal}`, 175);
+                doc.text(splitSignal, 18, flagsY);
+                flagsY += (splitSignal.length - 1) * 5;
+            });
+        }
+      }
     }
 
     // Save PDF
