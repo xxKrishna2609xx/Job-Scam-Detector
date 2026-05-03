@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "dist/spa",
+    outDir: "dist",
   },
   plugins: [react()],
   resolve: {
