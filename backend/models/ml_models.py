@@ -21,13 +21,40 @@ class MLModels:
         self._loaded = False
         self.load_models()
 
+    def _auto_train(self):
+        """Automatically run train_models.py if .pkl files are missing."""
+        try:
+            import subprocess
+            import sys
+            train_script = os.path.join(os.path.dirname(MODEL_DIR), "..", "train_models.py")
+            train_script = os.path.abspath(train_script)
+            if os.path.exists(train_script):
+                print("[AUTO-TRAIN] Models not found. Running train_models.py ...")
+                result = subprocess.run(
+                    [sys.executable, train_script],
+                    cwd=os.path.dirname(train_script),
+                    capture_output=True, text=True, timeout=120
+                )
+                print(result.stdout)
+                if result.returncode != 0:
+                    print(f"[AUTO-TRAIN ERROR] {result.stderr}")
+                else:
+                    print("[AUTO-TRAIN] Training completed successfully!")
+            else:
+                print(f"[WARN] train_models.py not found at {train_script}")
+        except Exception as e:
+            print(f"[AUTO-TRAIN ERROR] {e}")
+
     def load_models(self):
         """Load the best trained ML model and preprocessor from disk."""
         try:
             # Load preprocessor
             preprocessor_path = os.path.join(MODEL_DIR, "preprocessor.pkl")
             if not os.path.exists(preprocessor_path):
-                print("[WARN] Preprocessor not found. Run the training notebook first.")
+                # Auto-train if models are missing
+                self._auto_train()
+            if not os.path.exists(preprocessor_path):
+                print("[WARN] Preprocessor still not found after auto-train attempt.")
                 return
 
             with open(preprocessor_path, "rb") as f:
