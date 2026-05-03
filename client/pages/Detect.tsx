@@ -11,6 +11,7 @@ import {
   Download,
   Loader2,
   Info,
+  Zap,
 } from "lucide-react";
 import {
   BarChart,
@@ -33,10 +34,27 @@ interface PredictionResult {
   color: string;
 }
 
+interface FieldValidation {
+  field: string;
+  valid: boolean;
+  message: string;
+}
+
+interface ValidationResult {
+  is_valid: boolean;
+  fields: FieldValidation[];
+  summary: string;
+}
+
 interface AnalysisResults {
+  status?: "success" | "validation_failed";
+  validation?: ValidationResult;
   predictions: PredictionResult[];
-  overallRisk: "genuine" | "suspicious" | "scam";
-  riskScore: number;
+  overallRisk: "genuine" | "suspicious" | "scam" | null;
+  riskScore: number | null;
+  aiExplanation?: string | null;
+  redFlags?: string[];
+  trustSignals?: string[];
   mock?: boolean;
 }
 
@@ -91,6 +109,7 @@ export default function Detect() {
       // Fallback mock data — clearly flagged
       setIsMockData(true);
       setResults({
+        status: "success",
         predictions: [
           { algorithm: "Logistic Regression", prediction: "genuine", confidence: 92, color: "#10B981" },
           { algorithm: "Naive Bayes", prediction: "scam", confidence: 78, color: "#EF4444" },
@@ -145,13 +164,16 @@ export default function Detect() {
     } else if (results.overallRisk === "suspicious") {
         riskColor = [234, 179, 8]; // yellow
         riskText = "SUSPICIOUS";
-    } else {
+    } else if (results.overallRisk === "scam") {
         riskColor = [239, 68, 68]; // red
         riskText = "SCAM";
+    } else {
+        riskColor = [100, 100, 100];
+        riskText = "INVALID INPUT";
     }
     
     doc.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
-    doc.text(`Risk Level: ${riskText} (Score: ${results.riskScore}%)`, 14, 55);
+    doc.text(`Risk Level: ${riskText} ${results.riskScore !== null ? `(Score: ${results.riskScore}%)` : ''}`, 14, 55);
 
     if (isMockData) {
         doc.setTextColor(234, 179, 8);
@@ -176,38 +198,87 @@ export default function Detect() {
         headStyles: { fillColor: [63, 63, 70] }
     });
 
-    // Model Predictions Table
-    const lastAutoTableY = (doc as any).lastAutoTable?.finalY || 120;
-    
-    doc.text("Model Predictions", 14, lastAutoTableY + 15);
-    
-    const predictionBody = results.predictions.map(p => [
-        p.algorithm,
-        p.prediction.toUpperCase(),
-        `${p.confidence}%`
-    ]);
+    if (results.status === "success") {
+      // Model Predictions Table
+      const lastAutoTableY = (doc as any).lastAutoTable?.finalY || 120;
+      
+      doc.text("Model Predictions", 14, lastAutoTableY + 15);
+      
+      const predictionBody = results.predictions.map(p => [
+          p.algorithm,
+          p.prediction.toUpperCase(),
+          `${p.confidence}%`
+      ]);
 
-    autoTable(doc, {
-        startY: lastAutoTableY + 20,
-        head: [['Algorithm', 'Prediction', 'Confidence']],
-        body: predictionBody,
-        theme: 'striped',
-        headStyles: { fillColor: [63, 63, 70] },
-        didParseCell: function(data) {
-            if (data.section === 'body' && data.column.index === 1) {
-                if (data.cell.raw === 'GENUINE') {
-                    data.cell.styles.textColor = [16, 185, 129];
-                    data.cell.styles.fontStyle = 'bold';
-                } else if (data.cell.raw === 'SCAM') {
-                    data.cell.styles.textColor = [239, 68, 68];
-                    data.cell.styles.fontStyle = 'bold';
-                }
-            }
-        }
-    });
+      autoTable(doc, {
+          startY: lastAutoTableY + 20,
+          head: [['Algorithm', 'Prediction', 'Confidence']],
+          body: predictionBody,
+          theme: 'striped',
+          headStyles: { fillColor: [63, 63, 70] },
+          didParseCell: function(data) {
+              if (data.section === 'body' && data.column.index === 1) {
+                  if (data.cell.raw === 'GENUINE') {
+                      data.cell.styles.textColor = [16, 185, 129];
+                      data.cell.styles.fontStyle = 'bold';
+                  } else if (data.cell.raw === 'SCAM') {
+                      data.cell.styles.textColor = [239, 68, 68];
+                      data.cell.styles.fontStyle = 'bold';
+                  }
+              }
+          }
+      });
+    }
 
     // Save PDF
     doc.save(`jobguard-report-${Date.now()}.pdf`);
+  };
+
+  const getFieldError = (fieldName: string) => {
+    if (results?.status === "validation_failed" && results.validation?.fields) {
+      const field = results.validation.fields.find((f) => f.field === fieldName);
+      if (field && !field.valid) {
+        return field.message;
+      }
+    }
+    return null;
+  };
+
+  const renderInput = (label: string, name: string, placeholder: string, type = "text", required = false) => {
+    const error = getFieldError(name);
+    return (
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        {type === "textarea" ? (
+          <textarea
+            name={name}
+            value={(formData as any)[name]}
+            onChange={handleInputChange}
+            placeholder={placeholder}
+            rows={name === "jobDescription" ? 4 : 3}
+            className={`w-full px-4 py-2 rounded-lg bg-input border focus:outline-none focus:ring-2 transition-all resize-none ${
+              error ? "border-red-500 focus:ring-red-500/50" : "border-border focus:ring-primary/50"
+            }`}
+            required={required}
+          />
+        ) : (
+          <input
+            type={type}
+            name={name}
+            value={(formData as any)[name]}
+            onChange={handleInputChange}
+            placeholder={placeholder}
+            className={`w-full px-4 py-2 rounded-lg bg-input border focus:outline-none focus:ring-2 transition-all ${
+              error ? "border-red-500 focus:ring-red-500/50" : "border-border focus:ring-primary/50"
+            }`}
+            required={required}
+          />
+        )}
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      </div>
+    );
   };
 
   return (
@@ -268,98 +339,12 @@ export default function Detect() {
               <h2 className="text-2xl font-bold text-foreground mb-6">Analyze Job</h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Job Title */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Job Title
-                  </label>
-                  <input
-                    type="text"
-                    name="jobTitle"
-                    value={formData.jobTitle}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Senior Developer"
-                    className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    required
-                  />
-                </div>
-
-                {/* Company Name */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    name="companyName"
-                    value={formData.companyName}
-                    onChange={handleInputChange}
-                    placeholder="e.g., TechCorp Inc"
-                    className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    required
-                  />
-                </div>
-
-                {/* Job Description */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Job Description
-                  </label>
-                  <textarea
-                    name="jobDescription"
-                    value={formData.jobDescription}
-                    onChange={handleInputChange}
-                    placeholder="Paste the full job description..."
-                    rows={4}
-                    className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
-                    required
-                  />
-                </div>
-
-                {/* Requirements */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Requirements
-                  </label>
-                  <textarea
-                    name="requirements"
-                    value={formData.requirements}
-                    onChange={handleInputChange}
-                    placeholder="List the job requirements..."
-                    rows={3}
-                    className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
-                  />
-                </div>
-
-                {/* Salary */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Salary (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="salary"
-                    value={formData.salary}
-                    onChange={handleInputChange}
-                    placeholder="e.g., $100k - $150k"
-                    className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  />
-                </div>
-
-                {/* Location */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Location (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Remote or City, Country"
-                    className="w-full px-4 py-2 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  />
-                </div>
+                {renderInput("Job Title", "jobTitle", "e.g., Senior Developer", "text", true)}
+                {renderInput("Company Name", "companyName", "e.g., TechCorp Inc", "text", true)}
+                {renderInput("Job Description", "jobDescription", "Paste the full job description...", "textarea", true)}
+                {renderInput("Requirements", "requirements", "List the job requirements...", "textarea")}
+                {renderInput("Salary (Optional)", "salary", "e.g., $100k - $150k")}
+                {renderInput("Location (Optional)", "location", "e.g., Remote or City, Country")}
 
                 <button
                   type="submit"
@@ -392,7 +377,7 @@ export default function Detect() {
                   Analyzing Job Posting...
                 </h3>
                 <p className="text-foreground/60 max-w-sm">
-                  Running analysis through all 5 machine learning models. This won't take long.
+                  Our AI agents are validating input, running machine learning models, and generating a detailed explanation. This might take a few seconds.
                 </p>
               </div>
             ) : !results ? (
@@ -405,8 +390,40 @@ export default function Detect() {
                 </h3>
                 <p className="text-foreground/60 max-w-sm">
                   Fill in the job details on the left and click "Analyze Job" to get AI-powered
-                  predictions from our 5 machine learning models.
+                  predictions and explanations from our LangGraph multi-agent system.
                 </p>
+              </div>
+            ) : results.status === "validation_failed" ? (
+              <div className="p-12 rounded-2xl bg-red-900/10 border border-red-500/30 flex flex-col items-center justify-center min-h-[600px] text-center">
+                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-red-500 mb-2">
+                  Invalid Input Detected
+                </h3>
+                <p className="text-foreground/80 max-w-md mb-6">
+                  {results.validation?.summary || "Our AI agent detected gibberish or improperly formatted data in your submission. We cannot run machine learning models on this input."}
+                </p>
+                <div className="w-full text-left bg-background/50 p-4 rounded-lg border border-border">
+                  <h4 className="font-semibold text-foreground mb-3 text-sm">Issues Found:</h4>
+                  <ul className="space-y-2">
+                    {results.validation?.fields?.filter(f => !f.valid).map((field, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm">
+                        <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-medium capitalize">{field.field.replace(/([A-Z])/g, ' $1').trim()}: </span>
+                          <span className="text-foreground/70">{field.message}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <button
+                  onClick={() => setResults(null)}
+                  className="mt-8 px-6 py-2 rounded-lg border-2 border-red-500 text-red-500 font-medium hover:bg-red-500/10 transition-all"
+                >
+                  Fix Inputs & Try Again
+                </button>
               </div>
             ) : (
               <div className="space-y-6">
@@ -473,10 +490,57 @@ export default function Detect() {
                   </div>
                 </div>
 
+                {/* AI Explanation Card */}
+                {results.aiExplanation && (
+                  <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-900/20 to-purple-900/20 border border-indigo-500/30">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Zap className="w-5 h-5 text-indigo-400" />
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Agentic AI Analysis
+                      </h3>
+                    </div>
+                    <p className="text-foreground/80 leading-relaxed text-sm mb-6">
+                      {results.aiExplanation}
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {results.redFlags && results.redFlags.length > 0 && (
+                        <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-4">
+                          <h4 className="text-red-400 font-medium text-sm flex items-center gap-1.5 mb-3">
+                            <AlertTriangle className="w-4 h-4" /> Red Flags
+                          </h4>
+                          <ul className="space-y-2">
+                            {results.redFlags.map((flag, idx) => (
+                              <li key={idx} className="text-xs text-red-200/70 flex items-start gap-1.5">
+                                <span className="text-red-500 mt-0.5">•</span> {flag}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {results.trustSignals && results.trustSignals.length > 0 && (
+                        <div className="bg-green-950/30 border border-green-900/50 rounded-xl p-4">
+                          <h4 className="text-green-400 font-medium text-sm flex items-center gap-1.5 mb-3">
+                            <CheckCircle className="w-4 h-4" /> Trust Signals
+                          </h4>
+                          <ul className="space-y-2">
+                            {results.trustSignals.map((signal, idx) => (
+                              <li key={idx} className="text-xs text-green-200/70 flex items-start gap-1.5">
+                                <span className="text-green-500 mt-0.5">•</span> {signal}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Algorithm Filter */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-3">
-                    Filter Results
+                    Filter ML Results
                   </label>
                   <div className="flex gap-2 flex-wrap">
                     <button
