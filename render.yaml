@@ -4,7 +4,7 @@ services:
     env: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python train_models.py
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: "3.10.13"
