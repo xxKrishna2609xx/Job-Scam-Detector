@@ -19,7 +19,8 @@ class MLModels:
         self.preprocessor = None
         self.metadata: Dict = {}
         self._loaded = False
-        self.load_models()
+        # Do not load models here; load them lazily on first request to prevent Gunicorn timeout
+
 
     def _auto_train(self):
         """Automatically run train_models.py if .pkl files are missing."""
@@ -87,6 +88,8 @@ class MLModels:
 
     def is_loaded(self) -> bool:
         """Return whether real trained model is available."""
+        if not self._loaded:
+            self.load_models()
         return self._loaded
 
     def preprocess_input(self, job_data: Dict) -> Optional:

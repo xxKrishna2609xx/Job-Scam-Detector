@@ -45,6 +45,10 @@ def models_info():
         'KNN': 'Instance-Based'
     }
     
+    # Ensure models are loaded
+    if not ml_models.is_loaded():
+        pass
+    
     for name, meta in ml_models.metadata.items():
         models_list.append({
             'name': name,
@@ -62,6 +66,8 @@ def models_info():
 def models_metrics():
     """Get full metrics (accuracy, precision, recall, f1, cm) for all models."""
     from models.ml_models import ml_models
+    if not ml_models.is_loaded():
+        pass
     return jsonify(ml_models.metadata), 200
 
 
