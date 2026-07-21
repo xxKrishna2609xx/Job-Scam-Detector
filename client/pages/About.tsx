@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Navbar from "@/components/Navbar";
 import {
   Shield,
   AlertTriangle,
@@ -70,29 +71,7 @@ export default function About() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">JobGuard</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back Home
-            </Link>
-            <Link to="/detect" className="btn-primary">
-              Start Detection
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="max-w-4xl mx-auto px-6 py-16 space-y-16">
         {/* Page Header */}

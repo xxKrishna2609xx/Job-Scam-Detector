@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import Navbar from "@/components/Navbar";
 import {
   Shield,
   ArrowLeft,
@@ -342,53 +343,7 @@ export default function Detect() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">JobGuard</span>
-          </Link>
-          <Link to="/" className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back Home
-          </Link>
-          <Link
-            to="/model-insights"
-            className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
-          >
-            <BarChart3 className="w-4 h-4" />
-            Model Insights
-          </Link>
-          <button
-            onClick={async () => {
-              try {
-                const res = await fetch(getApiUrl('/api/health'));
-                if (res.ok) {
-                  toast.success("Backend Connected Successfully!");
-                } else {
-                  toast.error("Backend returned an error.");
-                }
-              } catch (err) {
-                toast.error("Could not connect to Backend.");
-              }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
-          >
-            <Shield className="w-3.5 h-3.5" />
-            Check Connection
-          </button>
-          <Link
-            to="/about"
-            className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
-          >
-            <Info className="w-4 h-4" />
-            About
-          </Link>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

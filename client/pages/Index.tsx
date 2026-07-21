@@ -1,71 +1,12 @@
 import { Link } from "react-router-dom";
 import { Shield, CheckCircle, AlertCircle, Zap, Info, BarChart3 } from "lucide-react";
-import { getApiUrl } from "@/lib/utils";
-import { toast } from "sonner";
+import Navbar from "@/components/Navbar";
 
 export default function Index() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-card to-background">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">JobGuard</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href="#features"
-              className="text-foreground/60 hover:text-foreground transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              className="text-foreground/60 hover:text-foreground transition-colors"
-            >
-              How It Works
-            </a>
-            <Link
-              to="/model-insights"
-              className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Model Insights
-            </Link>
-            <Link
-              to="/about"
-              className="flex items-center gap-1.5 text-foreground/60 hover:text-foreground transition-colors"
-            >
-              <Info className="w-4 h-4" />
-              About
-            </Link>
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch(getApiUrl('/api/health'));
-                  if (res.ok) {
-                    toast.success("Backend Connected Successfully!");
-                  } else {
-                    toast.error("Backend returned an error.");
-                  }
-                } catch (err) {
-                  toast.error("Could not connect to Backend.");
-                }
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Check Connection
-            </button>
-            <Link to="/detect" className="btn-primary">
-              Start Detection
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
+
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 py-24 text-center animate-fade-in">
